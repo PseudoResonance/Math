@@ -31,18 +31,19 @@ import javax.swing.text.AbstractDocument;
 import javax.swing.text.AttributeSet;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.DocumentFilter;
+import javax.swing.text.StyleContext;
 
 import org.mariuszgromada.math.mxparser.Argument;
 import org.mariuszgromada.math.mxparser.Expression;
 
-public class EulerSolver
-{
+public class EulerSolver {
 	private static DecimalFormat df = new DecimalFormat("#.###");
 
 	private static final Dimension DEFAULT_WINDOW_SIZE = new Dimension(500, 400);
-	private static final Dimension MAX_TEXT_SIZE = new Dimension(Integer.MAX_VALUE, 30);
-	private static final double FONT_MULTIPLIER = 1.4;
-	private static final int MAX_STEP_LENGTH = 4;
+	private static final int MAX_STEP_STRING_LENGTH = 4;
+	private static final int TARGET_FONT_WIDTH = 650;
+	
+	private static int fontHeight = 0;
 
 	static JFrame jf;
 	static JPanel panel;
@@ -76,31 +77,36 @@ public class EulerSolver
 	private static boolean validStepCount = false;
 	private static boolean validDecimals = true;
 
-	public static void main(String args[])
-	{
+	public static void main(String args[]) {
 		UIDefaults defaults = UIManager.getDefaults();
-		for (Enumeration<Object> e = defaults.keys(); e.hasMoreElements();)
-		{
+		for (Enumeration<Object> e = defaults.keys(); e.hasMoreElements();) {
 			Object key = e.nextElement();
 			Object value = defaults.get(key);
-			if (value instanceof Font)
-			{
+			if (value instanceof Font) {
 				Font font = (Font) value;
-				int newSize = (int) Math.round(font.getSize() * FONT_MULTIPLIER);
-				if (value instanceof FontUIResource)
-				{
+				int newSize = font.getSize();
+				int targetWidth = TARGET_FONT_WIDTH;
+				while (true) {
+					Font newFont = font.deriveFont((float) newSize + 1);
+					int newWidth = StyleContext.getDefaultStyleContext().getFontMetrics(newFont).stringWidth(
+							"abcdefghijklmnopqrstuvwxyz0123456789 ABCDEFGHIJKLMNOPQRSTUVWXYZ!@#$%^&*()-=_+`~[]{}'\"\\|;:/?.>,<");
+					if (newWidth <= targetWidth)
+						newSize++;
+					else
+						break;
+				}
+				fontHeight = StyleContext.getDefaultStyleContext().getFontMetrics(font.deriveFont((float) newSize)).getHeight();
+				if (value instanceof FontUIResource) {
 					defaults.put(key, new FontUIResource(font.getName(), font.getStyle(), newSize));
-				} else
-				{
+				} else {
 					defaults.put(key, new Font(font.getName(), font.getStyle(), newSize));
 				}
 			}
 		}
-		try
-		{
+		try {
 			UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-		} catch (ClassNotFoundException | InstantiationException | IllegalAccessException | UnsupportedLookAndFeelException e1)
-		{
+		} catch (ClassNotFoundException | InstantiationException | IllegalAccessException
+				| UnsupportedLookAndFeelException e1) {
 		}
 
 		jf = new JFrame("Euler Solver");
@@ -123,227 +129,182 @@ public class EulerSolver
 		valuesPanel = new JPanel();
 		valuesPanel.setLayout(new BoxLayout(valuesPanel, BoxLayout.Y_AXIS));
 		equation = new JTextField();
-		equation.setMaximumSize(MAX_TEXT_SIZE);
-		equation.getDocument().addDocumentListener(new DocumentListener()
-		{
-			public void insertUpdate(DocumentEvent e)
-			{
-				if (testSyntax(equation.getText()))
-				{
+		equation.getDocument().addDocumentListener(new DocumentListener() {
+			public void insertUpdate(DocumentEvent e) {
+				if (testSyntax(equation.getText())) {
 					validEquation = true;
 					calculate();
 					equation.setBorder(BorderFactory.createLineBorder(Color.BLACK));
-				} else
-				{
+				} else {
 					validEquation = false;
 					equation.setBorder(BorderFactory.createLineBorder(Color.RED));
 				}
 			}
 
-			public void removeUpdate(DocumentEvent e)
-			{
-				if (testSyntax(equation.getText()))
-				{
+			public void removeUpdate(DocumentEvent e) {
+				if (testSyntax(equation.getText())) {
 					validEquation = true;
 					calculate();
 					equation.setBorder(BorderFactory.createLineBorder(Color.BLACK));
-				} else
-				{
+				} else {
 					validEquation = false;
 					equation.setBorder(BorderFactory.createLineBorder(Color.RED));
 				}
 			}
 
-			public void changedUpdate(DocumentEvent e)
-			{
-				if (testSyntax(equation.getText()))
-				{
+			public void changedUpdate(DocumentEvent e) {
+				if (testSyntax(equation.getText())) {
 					validEquation = true;
 					calculate();
 					equation.setBorder(BorderFactory.createLineBorder(Color.BLACK));
-				} else
-				{
+				} else {
 					validEquation = false;
 					equation.setBorder(BorderFactory.createLineBorder(Color.RED));
 				}
 			}
 		});
 		initialX = new JTextField();
-		initialX.setMaximumSize(MAX_TEXT_SIZE);
-		((AbstractDocument) initialX.getDocument()).setDocumentFilter(new DocumentFilter()
-		{
+		((AbstractDocument) initialX.getDocument()).setDocumentFilter(new DocumentFilter() {
 			Pattern regEx = Pattern.compile("[\\d-.]*");
 
 			@Override
-			public void replace(FilterBypass fb, int offset, int length, String text, AttributeSet attrs) throws BadLocationException
-			{
+			public void replace(FilterBypass fb, int offset, int length, String text, AttributeSet attrs)
+					throws BadLocationException {
 				Matcher matcher = regEx.matcher(text);
-				if (!matcher.matches())
-				{
+				if (!matcher.matches()) {
 					return;
 				}
 				super.replace(fb, offset, length, text, attrs);
 			}
 		});
-		initialX.getDocument().addDocumentListener(new DocumentListener()
-		{
-			public void insertUpdate(DocumentEvent e)
-			{
+		initialX.getDocument().addDocumentListener(new DocumentListener() {
+			public void insertUpdate(DocumentEvent e) {
 				validInitialX = isFieldNumeric(initialX) ? true : false;
 				calculate();
 			}
 
-			public void removeUpdate(DocumentEvent e)
-			{
+			public void removeUpdate(DocumentEvent e) {
 				validInitialX = isFieldNumeric(initialX) ? true : false;
 				calculate();
 			}
 
-			public void changedUpdate(DocumentEvent e)
-			{
+			public void changedUpdate(DocumentEvent e) {
 				validInitialX = isFieldNumeric(initialX) ? true : false;
 				calculate();
 			}
 		});
 		initialY = new JTextField();
-		initialY.setMaximumSize(MAX_TEXT_SIZE);
-		((AbstractDocument) initialY.getDocument()).setDocumentFilter(new DocumentFilter()
-		{
+		((AbstractDocument) initialY.getDocument()).setDocumentFilter(new DocumentFilter() {
 			Pattern regEx = Pattern.compile("[\\d-.]*");
 
 			@Override
-			public void replace(FilterBypass fb, int offset, int length, String text, AttributeSet attrs) throws BadLocationException
-			{
+			public void replace(FilterBypass fb, int offset, int length, String text, AttributeSet attrs)
+					throws BadLocationException {
 				Matcher matcher = regEx.matcher(text);
-				if (!matcher.matches())
-				{
+				if (!matcher.matches()) {
 					return;
 				}
 				super.replace(fb, offset, length, text, attrs);
 			}
 		});
-		initialY.getDocument().addDocumentListener(new DocumentListener()
-		{
-			public void insertUpdate(DocumentEvent e)
-			{
+		initialY.getDocument().addDocumentListener(new DocumentListener() {
+			public void insertUpdate(DocumentEvent e) {
 				validInitialY = isFieldNumeric(initialY) ? true : false;
 				calculate();
 			}
 
-			public void removeUpdate(DocumentEvent e)
-			{
+			public void removeUpdate(DocumentEvent e) {
 				validInitialY = isFieldNumeric(initialY) ? true : false;
 				calculate();
 			}
 
-			public void changedUpdate(DocumentEvent e)
-			{
+			public void changedUpdate(DocumentEvent e) {
 				validInitialY = isFieldNumeric(initialY) ? true : false;
 				calculate();
 			}
 		});
 		stepSize = new JTextField();
-		stepSize.setMaximumSize(MAX_TEXT_SIZE);
-		((AbstractDocument) stepSize.getDocument()).setDocumentFilter(new DocumentFilter()
-		{
+		((AbstractDocument) stepSize.getDocument()).setDocumentFilter(new DocumentFilter() {
 			Pattern regEx = Pattern.compile("[\\d-.]*");
 
 			@Override
-			public void replace(FilterBypass fb, int offset, int length, String text, AttributeSet attrs) throws BadLocationException
-			{
+			public void replace(FilterBypass fb, int offset, int length, String text, AttributeSet attrs)
+					throws BadLocationException {
 				Matcher matcher = regEx.matcher(text);
-				if (!matcher.matches())
-				{
+				if (!matcher.matches()) {
 					return;
 				}
 				super.replace(fb, offset, length, text, attrs);
 			}
 		});
-		stepSize.getDocument().addDocumentListener(new DocumentListener()
-		{
-			public void insertUpdate(DocumentEvent e)
-			{
+		stepSize.getDocument().addDocumentListener(new DocumentListener() {
+			public void insertUpdate(DocumentEvent e) {
 				validStepSize = isFieldNumeric(stepSize) ? true : false;
 				calculate();
 			}
 
-			public void removeUpdate(DocumentEvent e)
-			{
+			public void removeUpdate(DocumentEvent e) {
 				validStepSize = isFieldNumeric(stepSize) ? true : false;
 				calculate();
 			}
 
-			public void changedUpdate(DocumentEvent e)
-			{
+			public void changedUpdate(DocumentEvent e) {
 				validStepSize = isFieldNumeric(stepSize) ? true : false;
 				calculate();
 			}
 		});
 		stepCount = new JTextField();
-		stepCount.setMaximumSize(MAX_TEXT_SIZE);
-		((AbstractDocument) stepCount.getDocument()).setDocumentFilter(new DocumentFilter()
-		{
+		((AbstractDocument) stepCount.getDocument()).setDocumentFilter(new DocumentFilter() {
 			Pattern regEx = Pattern.compile("\\d*");
 
 			@Override
-			public void replace(FilterBypass fb, int offset, int length, String text, AttributeSet attrs) throws BadLocationException
-			{
+			public void replace(FilterBypass fb, int offset, int length, String text, AttributeSet attrs)
+					throws BadLocationException {
 				Matcher matcher = regEx.matcher(text);
-				if (!matcher.matches() || stepCount.getDocument().getLength() > (MAX_STEP_LENGTH - 1))
-				{
+				if (!matcher.matches() || stepCount.getDocument().getLength() > (MAX_STEP_STRING_LENGTH - 1)) {
 					return;
 				}
 				super.replace(fb, offset, length, text, attrs);
 			}
 		});
-		stepCount.getDocument().addDocumentListener(new DocumentListener()
-		{
-			public void insertUpdate(DocumentEvent e)
-			{
+		stepCount.getDocument().addDocumentListener(new DocumentListener() {
+			public void insertUpdate(DocumentEvent e) {
 				validStepCount = isFieldNumeric(stepCount) ? true : false;
 				calculate();
 			}
 
-			public void removeUpdate(DocumentEvent e)
-			{
+			public void removeUpdate(DocumentEvent e) {
 				validStepCount = isFieldNumeric(stepCount) ? true : false;
 				calculate();
 			}
 
-			public void changedUpdate(DocumentEvent e)
-			{
+			public void changedUpdate(DocumentEvent e) {
 				validStepCount = isFieldNumeric(stepCount) ? true : false;
 				calculate();
 			}
 		});
 		decimals = new JTextField();
 		decimals.setText("3");
-		decimals.setMaximumSize(MAX_TEXT_SIZE);
-		((AbstractDocument) decimals.getDocument()).setDocumentFilter(new DocumentFilter()
-		{
+		decimals.setBorder(BorderFactory.createLineBorder(Color.BLACK));
+		((AbstractDocument) decimals.getDocument()).setDocumentFilter(new DocumentFilter() {
 			Pattern regEx = Pattern.compile("\\d*");
 
 			@Override
-			public void replace(FilterBypass fb, int offset, int length, String text, AttributeSet attrs) throws BadLocationException
-			{
+			public void replace(FilterBypass fb, int offset, int length, String text, AttributeSet attrs)
+					throws BadLocationException {
 				Matcher matcher = regEx.matcher(text);
-				if (!matcher.matches())
-				{
+				if (!matcher.matches()) {
 					return;
 				}
 				super.replace(fb, offset, length, text, attrs);
 			}
 		});
-		decimals.getDocument().addDocumentListener(new DocumentListener()
-		{
-			public void insertUpdate(DocumentEvent e)
-			{
-				if (isFieldNumeric(decimals))
-				{
+		decimals.getDocument().addDocumentListener(new DocumentListener() {
+			public void insertUpdate(DocumentEvent e) {
+				if (isFieldNumeric(decimals)) {
 					validDecimals = true;
 					String format = "#";
-					for (int i = 0; i < Integer.valueOf(decimals.getText()); i++)
-					{
+					for (int i = 0; i < Integer.valueOf(decimals.getText()); i++) {
 						if (i == 0)
 							format += ".";
 						format += "#";
@@ -354,14 +315,11 @@ public class EulerSolver
 					validDecimals = false;
 			}
 
-			public void removeUpdate(DocumentEvent e)
-			{
-				if (isFieldNumeric(decimals))
-				{
+			public void removeUpdate(DocumentEvent e) {
+				if (isFieldNumeric(decimals)) {
 					validDecimals = true;
 					String format = "#.";
-					for (int i = 0; i < Integer.valueOf(decimals.getText()); i++)
-					{
+					for (int i = 0; i < Integer.valueOf(decimals.getText()); i++) {
 						format += "#";
 					}
 					df = new DecimalFormat(format);
@@ -370,14 +328,11 @@ public class EulerSolver
 					validDecimals = false;
 			}
 
-			public void changedUpdate(DocumentEvent e)
-			{
-				if (isFieldNumeric(decimals))
-				{
+			public void changedUpdate(DocumentEvent e) {
+				if (isFieldNumeric(decimals)) {
 					validDecimals = true;
 					String format = "#.";
-					for (int i = 0; i < Integer.valueOf(decimals.getText()); i++)
-					{
+					for (int i = 0; i < Integer.valueOf(decimals.getText()); i++) {
 						format += "#";
 					}
 					df = new DecimalFormat(format);
@@ -389,7 +344,8 @@ public class EulerSolver
 		valueTable = new JTable();
 		makeNewModel();
 		scrollPane = new JScrollPane(valueTable);
-
+		valueTable.setRowHeight(fontHeight);
+		
 		jf.setSize(DEFAULT_WINDOW_SIZE);
 		jf.add(panel);
 		layoutConstraints.fill = GridBagConstraints.HORIZONTAL;
@@ -431,18 +387,27 @@ public class EulerSolver
 		stepCountPanel.add(stepCount);
 		decimalsPanel.add(new JLabel("Number of Decimals "));
 		decimalsPanel.add(decimals);
+		GridBagConstraints gbc = new GridBagConstraints();
+		gbc.gridx = 0;
+		gbc.gridy = 0;
+		gbc.ipadx = 0;
+		gbc.ipady = 0;
+		gbc.weightx = 1;
+		gbc.weighty = 0;
+		gbc.anchor = GridBagConstraints.FIRST_LINE_START;
 		JLabel valueLabel = new JLabel("Values");
 		valueLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
 		valueLabel.setBackground(Color.RED);
-		valuesPanel.add(valueLabel);
-		valuesPanel.add(scrollPane);
+		valuesPanel.setLayout(new GridBagLayout());
+		valuesPanel.add(valueLabel, gbc);
+		gbc.gridy = 1;
+		valuesPanel.add(scrollPane, gbc);
 		jf.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		jf.pack();
 		jf.setVisible(true);
 	}
 
-	private static boolean testSyntax(String equation)
-	{
+	private static boolean testSyntax(String equation) {
 		Expression exp = new Expression(equation);
 		exp.addArguments(x);
 		exp.addArguments(y);
@@ -452,34 +417,34 @@ public class EulerSolver
 		return test;
 	}
 
-	private static boolean isValidNumeric(String test)
-	{
-		try
-		{
+	private static boolean isValidNumeric(String test) {
+		try {
 			Double.valueOf(test);
 			return true;
-		} catch (NumberFormatException e)
-		{
+		} catch (NumberFormatException e) {
 			return false;
 		}
 	}
 
-	private static boolean isFieldNumeric(JTextField field)
-	{
-		if (isValidNumeric(field.getText()))
-		{
+	private static boolean isFieldNumeric(JTextField field) {
+		if (isValidNumeric(field.getText())) {
 			field.setBorder(BorderFactory.createLineBorder(Color.BLACK));
 			return true;
-		} else
-		{
+		} else {
 			field.setBorder(BorderFactory.createLineBorder(Color.RED));
 			return false;
 		}
 	}
 
-	private static void makeNewModel()
-	{
-		model = new DefaultTableModel();
+	private static void makeNewModel() {
+		model = new DefaultTableModel() {
+			private static final long serialVersionUID = 193961864905348635L;
+
+			@Override
+			public boolean isCellEditable(int row, int column) {
+				return false;
+			}
+		};
 		model.addColumn("Step");
 		model.addColumn("dy");
 		model.addColumn("x Value");
@@ -487,17 +452,14 @@ public class EulerSolver
 		valueTable.setModel(model);
 	}
 
-	private static void calculate()
-	{
-		if (validEquation && validInitialX && validInitialY && validStepSize && validStepCount && validDecimals)
-		{
+	private static void calculate() {
+		if (validEquation && validInitialX && validInitialY && validStepSize && validStepCount && validDecimals) {
 			makeNewModel();
 			double lastX = Double.valueOf(initialX.getText());
 			double lastY = Double.valueOf(initialY.getText());
 			double dx = Double.valueOf(stepSize.getText());
 			model.addRow(new String[] { "0", "0", df.format(lastX), df.format(lastY) });
-			for (int i = 1; i <= Integer.valueOf(stepCount.getText()); i++)
-			{
+			for (int i = 1; i <= Integer.valueOf(stepCount.getText()); i++) {
 				x.setArgumentValue(lastX);
 				y.setArgumentValue(lastY);
 				double dy = expression.calculate() * dx;
