@@ -42,7 +42,7 @@ public class EulerSolver {
 	private static final Dimension DEFAULT_WINDOW_SIZE = new Dimension(500, 400);
 	private static final int MAX_STEP_STRING_LENGTH = 4;
 	private static final int TARGET_FONT_WIDTH = 650;
-	
+
 	private static int fontHeight = 0;
 
 	static JFrame jf;
@@ -95,7 +95,8 @@ public class EulerSolver {
 					else
 						break;
 				}
-				fontHeight = StyleContext.getDefaultStyleContext().getFontMetrics(font.deriveFont((float) newSize)).getHeight();
+				fontHeight = StyleContext.getDefaultStyleContext().getFontMetrics(font.deriveFont((float) newSize))
+						.getHeight();
 				if (value instanceof FontUIResource) {
 					defaults.put(key, new FontUIResource(font.getName(), font.getStyle(), newSize));
 				} else {
@@ -345,7 +346,7 @@ public class EulerSolver {
 		makeNewModel();
 		scrollPane = new JScrollPane(valueTable);
 		valueTable.setRowHeight(fontHeight);
-		
+
 		jf.setSize(DEFAULT_WINDOW_SIZE);
 		jf.add(panel);
 		layoutConstraints.fill = GridBagConstraints.HORIZONTAL;
