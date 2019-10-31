@@ -1,7 +1,6 @@
 package pw.otake.math;
 
 import java.awt.Color;
-import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.GridBagConstraints;
@@ -32,6 +31,12 @@ import javax.swing.text.BadLocationException;
 import javax.swing.text.DocumentFilter;
 import javax.swing.text.StyleContext;
 
+import org.jfree.chart.ChartFactory;
+import org.jfree.chart.ChartPanel;
+import org.jfree.chart.JFreeChart;
+import org.jfree.chart.plot.PlotOrientation;
+import org.jfree.data.xy.XYSeries;
+import org.jfree.data.xy.XYSeriesCollection;
 import org.mariuszgromada.math.mxparser.Argument;
 import org.mariuszgromada.math.mxparser.Expression;
 
@@ -45,7 +50,8 @@ public class EulerSolver {
 
 	private static JFrame jf;
 	private static JPanel panel;
-	private static GridBagLayout layout;
+	private static JPanel leftPanel;
+	private static JPanel rightPanel;
 	private static InputField equation;
 	private static InputField initialX;
 	private static InputField initialY;
@@ -53,8 +59,12 @@ public class EulerSolver {
 	private static InputField stepCount;
 	private static InputField decimals;
 	private static JPanel valuesPanel;
-	private static JScrollPane scrollPane;
+	private static JScrollPane valuesScrollPane;
 	private static JTable valueTable;
+	private static JPanel graphPanel;
+	private static XYSeries series = new XYSeries("");
+	private static JFreeChart graph;
+	private static ChartPanel chartPanel;
 	private static DefaultTableModel model;
 
 	private static Expression expression = null;
@@ -70,9 +80,12 @@ public class EulerSolver {
 		}
 
 		jf = new JFrame("Euler Solver");
-		layout = new GridBagLayout();
 		panel = new JPanel();
-		panel.setLayout(layout);
+		panel.setLayout(new GridBagLayout());
+		leftPanel = new JPanel();
+		leftPanel.setLayout(new GridBagLayout());
+		rightPanel = new JPanel();
+		rightPanel.setLayout(new GridBagLayout());
 
 		equation = new InputField("Equation (dy/dx)", (field) -> {
 			if (updateEquation(field.getText())) {
@@ -149,9 +162,12 @@ public class EulerSolver {
 		});
 		decimals = new InputField("Number of Decimals", (field) -> {
 			if (isFieldNumeric(field)) {
-				String format = "#.";
-				for (int i = 0; i < Integer.valueOf(field.getText()); i++)
+				String format = "#";
+				for (int i = 0; i < Integer.valueOf(field.getText()); i++) {
+					if (i == 0)
+						format += ".";
 					format += "#";
+				}
 				df = new DecimalFormat(format);
 				return true;
 			} else
@@ -173,9 +189,24 @@ public class EulerSolver {
 		valuesPanel.setLayout(new BoxLayout(valuesPanel, BoxLayout.Y_AXIS));
 		valueTable = new JTable();
 		newTableModel();
-		scrollPane = new JScrollPane(valueTable);
+		valuesScrollPane = new JScrollPane(valueTable);
 		valueTable.setRowHeight(fontHeight);
 
+		setupGraph();
+
+		GridBagConstraints gbc = new GridBagConstraints();
+		gbc.fill = GridBagConstraints.BOTH;
+		gbc.gridx = 0;
+		gbc.gridy = 0;
+		gbc.ipadx = 0;
+		gbc.ipady = 0;
+		gbc.weightx = 1;
+		gbc.weighty = 1;
+		gbc.insets = new Insets(0, 0, 0, 0);
+		gbc.anchor = GridBagConstraints.FIRST_LINE_START;
+		panel.add(leftPanel, gbc);
+		gbc.gridx = 1;
+		panel.add(rightPanel, gbc);
 		jf.setSize(DEFAULT_WINDOW_SIZE);
 		jf.add(panel);
 		setupPanel();
@@ -197,23 +228,23 @@ public class EulerSolver {
 		gbc.weighty = 0;
 		gbc.insets = new Insets(10, 6, 3, 6);
 		gbc.anchor = GridBagConstraints.FIRST_LINE_START;
-		panel.add(equation.getComponent(), gbc);
+		leftPanel.add(equation.getComponent(), gbc);
 		gbc.insets = new Insets(3, 6, 3, 6);
 		gbc.gridy = 1;
-		panel.add(initialX.getComponent(), gbc);
+		leftPanel.add(initialX.getComponent(), gbc);
 		gbc.gridy = 2;
-		panel.add(initialY.getComponent(), gbc);
+		leftPanel.add(initialY.getComponent(), gbc);
 		gbc.gridy = 3;
-		panel.add(stepSize.getComponent(), gbc);
+		leftPanel.add(stepSize.getComponent(), gbc);
 		gbc.gridy = 4;
-		panel.add(stepCount.getComponent(), gbc);
+		leftPanel.add(stepCount.getComponent(), gbc);
 		gbc.gridy = 5;
-		panel.add(decimals.getComponent(), gbc);
+		leftPanel.add(decimals.getComponent(), gbc);
 		gbc.insets = new Insets(3, 6, 10, 6);
 		gbc.gridy = 6;
 		gbc.weighty = 1;
 		gbc.fill = GridBagConstraints.BOTH;
-		panel.add(valuesPanel, gbc);
+		leftPanel.add(valuesPanel, gbc);
 	}
 
 	private static void setupTable() {
@@ -227,14 +258,40 @@ public class EulerSolver {
 		gbc.fill = GridBagConstraints.HORIZONTAL;
 		gbc.anchor = GridBagConstraints.FIRST_LINE_START;
 		JLabel valueLabel = new JLabel("Values");
-		valueLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-		valueLabel.setBackground(Color.RED);
 		valuesPanel.setLayout(new GridBagLayout());
 		valuesPanel.add(valueLabel, gbc);
 		gbc.fill = GridBagConstraints.BOTH;
 		gbc.gridy = 1;
 		gbc.weighty = 1;
-		valuesPanel.add(scrollPane, gbc);
+		valuesPanel.add(valuesScrollPane, gbc);
+	}
+	
+	private static void setupGraph() {
+		graphPanel = new JPanel();
+		graphPanel.setLayout(new BoxLayout(graphPanel, BoxLayout.Y_AXIS));
+		GridBagConstraints gbc = new GridBagConstraints();
+		gbc.gridx = 0;
+		gbc.gridy = 0;
+		gbc.ipadx = 0;
+		gbc.ipady = 0;
+		gbc.weightx = 1;
+		gbc.weighty = 0;
+		gbc.fill = GridBagConstraints.HORIZONTAL;
+		gbc.anchor = GridBagConstraints.FIRST_LINE_START;
+		XYSeriesCollection dataset = new XYSeriesCollection();
+		graph = ChartFactory.createXYLineChart(null, "x", "y", dataset, PlotOrientation.VERTICAL, false, false, false);
+		dataset.addSeries(series);
+		chartPanel = new ChartPanel(graph);
+		JLabel graphLabel = new JLabel("Graph");
+		graphPanel.setLayout(new GridBagLayout());
+		graphPanel.add(graphLabel, gbc);
+		gbc.fill = GridBagConstraints.BOTH;
+		gbc.gridy = 1;
+		gbc.weighty = 1;
+		graphPanel.add(chartPanel, gbc);
+		gbc.gridy = 0;
+		rightPanel.setLayout(new GridBagLayout());
+		rightPanel.add(graphPanel, gbc);
 	}
 
 	private static void setDefaultFont() {
@@ -304,6 +361,7 @@ public class EulerSolver {
 		model.addColumn("x Value");
 		model.addColumn("y Value");
 		valueTable.setModel(model);
+		series.clear();
 	}
 
 	protected static void populateTable() {
@@ -325,7 +383,9 @@ public class EulerSolver {
 				if (Double.isNaN(val)) {
 					dyStr = "NaN";
 					lastYStr = "NaN";
-				}
+				} else
+					if (Double.isFinite(val))
+						series.add(lastX, lastY);
 				model.addRow(new String[] { "" + i, dyStr, df.format(lastX), lastYStr });
 			}
 		}
