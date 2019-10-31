@@ -280,6 +280,7 @@ public class EulerSolver {
 		gbc.anchor = GridBagConstraints.FIRST_LINE_START;
 		XYSeriesCollection dataset = new XYSeriesCollection();
 		graph = ChartFactory.createXYLineChart(null, "x", "y", dataset, PlotOrientation.VERTICAL, false, false, false);
+		graph.setAntiAlias(true);
 		dataset.addSeries(series);
 		chartPanel = new ChartPanel(graph);
 		JLabel graphLabel = new JLabel("Graph");
