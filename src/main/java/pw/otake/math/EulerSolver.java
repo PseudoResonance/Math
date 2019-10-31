@@ -7,6 +7,7 @@ import java.awt.Font;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
+import java.awt.Toolkit;
 import java.text.DecimalFormat;
 import java.util.Enumeration;
 import java.util.regex.Matcher;
@@ -41,7 +42,7 @@ public class EulerSolver {
 
 	private static final Dimension DEFAULT_WINDOW_SIZE = new Dimension(500, 400);
 	private static final int MAX_STEP_STRING_LENGTH = 4;
-	private static final int TARGET_FONT_WIDTH = 650;
+	private static final double TARGET_FONT_WIDTH = 7.5;
 
 	private static int fontHeight = 0;
 
@@ -78,6 +79,8 @@ public class EulerSolver {
 	private static boolean validDecimals = true;
 
 	public static void main(String args[]) {
+		int screenDPI = Toolkit.getDefaultToolkit().getScreenResolution();
+		int targetFontWidth = (int) (TARGET_FONT_WIDTH * screenDPI);
 		UIDefaults defaults = UIManager.getDefaults();
 		for (Enumeration<Object> e = defaults.keys(); e.hasMoreElements();) {
 			Object key = e.nextElement();
@@ -85,12 +88,11 @@ public class EulerSolver {
 			if (value instanceof Font) {
 				Font font = (Font) value;
 				int newSize = font.getSize();
-				int targetWidth = TARGET_FONT_WIDTH;
 				while (true) {
 					Font newFont = font.deriveFont((float) newSize + 1);
 					int newWidth = StyleContext.getDefaultStyleContext().getFontMetrics(newFont).stringWidth(
 							"abcdefghijklmnopqrstuvwxyz0123456789 ABCDEFGHIJKLMNOPQRSTUVWXYZ!@#$%^&*()-=_+`~[]{}'\"\\|;:/?.>,<");
-					if (newWidth <= targetWidth)
+					if (newWidth <= targetFontWidth)
 						newSize++;
 					else
 						break;
@@ -376,7 +378,7 @@ public class EulerSolver {
 		layoutConstraints.fill = GridBagConstraints.BOTH;
 		panel.add(valuesPanel, layoutConstraints);
 
-		equationPanel.add(new JLabel("Equation "));
+		equationPanel.add(new JLabel("Equation (dy/dx) "));
 		equationPanel.add(equation);
 		initialXPanel.add(new JLabel("Initial X Value "));
 		initialXPanel.add(initialX);
@@ -395,6 +397,7 @@ public class EulerSolver {
 		gbc.ipady = 0;
 		gbc.weightx = 1;
 		gbc.weighty = 0;
+		gbc.fill = GridBagConstraints.BOTH;
 		gbc.anchor = GridBagConstraints.FIRST_LINE_START;
 		JLabel valueLabel = new JLabel("Values");
 		valueLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -402,7 +405,9 @@ public class EulerSolver {
 		valuesPanel.setLayout(new GridBagLayout());
 		valuesPanel.add(valueLabel, gbc);
 		gbc.gridy = 1;
+		gbc.weighty = 1;
 		valuesPanel.add(scrollPane, gbc);
+		jf.setLocationByPlatform(true);
 		jf.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		jf.pack();
 		jf.setVisible(true);
