@@ -468,10 +468,17 @@ public class EulerSolver {
 			for (int i = 1; i <= Integer.valueOf(stepCount.getText()); i++) {
 				x.setArgumentValue(lastX);
 				y.setArgumentValue(lastY);
-				double dy = expression.calculate() * dx;
+				double val = expression.calculate();
+				double dy = val * dx;
 				lastX += dx;
 				lastY += dy;
-				model.addRow(new String[] { "" + i, df.format(dy), df.format(lastX), df.format(lastY) });
+				String dyStr = df.format(dy);
+				String lastYStr = df.format(lastY);
+				if (Double.isNaN(val)) {
+					dyStr = "NaN";
+					lastYStr = "NaN";
+				}
+				model.addRow(new String[] { "" + i, dyStr, df.format(lastX), lastYStr });
 			}
 		}
 	}
