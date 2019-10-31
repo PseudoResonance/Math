@@ -7,6 +7,7 @@ import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
 import java.awt.Toolkit;
+import java.awt.event.KeyEvent;
 import java.math.RoundingMode;
 import java.text.DecimalFormat;
 import java.util.Enumeration;
@@ -15,8 +16,11 @@ import java.util.regex.Pattern;
 
 import javax.swing.BorderFactory;
 import javax.swing.BoxLayout;
+import javax.swing.JCheckBoxMenuItem;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
+import javax.swing.JMenu;
+import javax.swing.JMenuBar;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
@@ -44,11 +48,13 @@ public class EulerSolver {
 	private static final Dimension DEFAULT_WINDOW_SIZE = new Dimension(500, 400);
 	private static final int MAX_STEP_STRING_LENGTH = 4;
 	private static final double TARGET_FONT_WIDTH = 7.5;
+	private static final boolean DEFAULT_AA_STATE = true;
 
 	private static DecimalFormat df = new DecimalFormat("#.###");
 	private static int fontHeight = 0;
 
 	private static JFrame jf;
+	private static JMenuBar menu;
 	private static JPanel panel;
 	private static JPanel leftPanel;
 	private static JPanel rightPanel;
@@ -87,6 +93,18 @@ public class EulerSolver {
 		rightPanel = new JPanel();
 		rightPanel.setLayout(new GridBagLayout());
 
+		menu = new JMenuBar();
+		jf.setJMenuBar(menu);
+		JMenu fileMenu = new JMenu("Edit");
+		menu.add(fileMenu);
+		fileMenu.setMnemonic(KeyEvent.VK_E);
+		JCheckBoxMenuItem antiAliasing = new JCheckBoxMenuItem("Anti-Aliasing");
+		fileMenu.add(antiAliasing);
+		antiAliasing.setMnemonic(KeyEvent.VK_A);
+		antiAliasing.setToolTipText("Enable or disable anti-aliasing on the graph");
+		antiAliasing.setSelected(DEFAULT_AA_STATE);
+		antiAliasing.addActionListener((event) -> { graph.setAntiAlias(antiAliasing.isSelected()); });
+		
 		equation = new InputField("Equation (dy/dx)", (field) -> {
 			if (updateEquation(field.getText())) {
 				field.setBorder(BorderFactory.createLineBorder(Color.BLACK));
@@ -280,7 +298,7 @@ public class EulerSolver {
 		gbc.anchor = GridBagConstraints.FIRST_LINE_START;
 		XYSeriesCollection dataset = new XYSeriesCollection();
 		graph = ChartFactory.createXYLineChart(null, "x", "y", dataset, PlotOrientation.VERTICAL, false, false, false);
-		graph.setAntiAlias(true);
+		graph.setAntiAlias(DEFAULT_AA_STATE);
 		dataset.addSeries(series);
 		chartPanel = new ChartPanel(graph);
 		JLabel graphLabel = new JLabel("Graph");
