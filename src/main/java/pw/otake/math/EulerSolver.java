@@ -8,6 +8,7 @@ import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
 import java.awt.Toolkit;
+import java.math.RoundingMode;
 import java.text.DecimalFormat;
 import java.util.Enumeration;
 import java.util.regex.Matcher;
@@ -79,6 +80,7 @@ public class EulerSolver {
 	private static boolean validDecimals = true;
 
 	public static void main(String args[]) {
+		df.setRoundingMode(RoundingMode.HALF_UP);
 		int screenDPI = Toolkit.getDefaultToolkit().getScreenResolution();
 		int targetFontWidth = (int) (TARGET_FONT_WIDTH * screenDPI);
 		UIDefaults defaults = UIManager.getDefaults();
