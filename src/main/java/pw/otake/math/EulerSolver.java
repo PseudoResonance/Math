@@ -397,13 +397,14 @@ public class EulerSolver {
 		gbc.ipady = 0;
 		gbc.weightx = 1;
 		gbc.weighty = 0;
-		gbc.fill = GridBagConstraints.BOTH;
+		gbc.fill = GridBagConstraints.HORIZONTAL;
 		gbc.anchor = GridBagConstraints.FIRST_LINE_START;
 		JLabel valueLabel = new JLabel("Values");
 		valueLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
 		valueLabel.setBackground(Color.RED);
 		valuesPanel.setLayout(new GridBagLayout());
 		valuesPanel.add(valueLabel, gbc);
+		gbc.fill = GridBagConstraints.BOTH;
 		gbc.gridy = 1;
 		gbc.weighty = 1;
 		valuesPanel.add(scrollPane, gbc);
