@@ -206,7 +206,6 @@ public class EulerSolver {
 		valuesPanel = new JPanel();
 		valuesPanel.setLayout(new BoxLayout(valuesPanel, BoxLayout.Y_AXIS));
 		valueTable = new JTable();
-		newTableModel();
 		valuesScrollPane = new JScrollPane(valueTable);
 		valueTable.setRowHeight(fontHeight);
 
@@ -282,6 +281,19 @@ public class EulerSolver {
 		gbc.gridy = 1;
 		gbc.weighty = 1;
 		valuesPanel.add(valuesScrollPane, gbc);
+		model = new DefaultTableModel() {
+			private static final long serialVersionUID = 193961864905348635L;
+
+			@Override
+			public boolean isCellEditable(int row, int column) {
+				return false;
+			}
+		};
+		model.addColumn("Step");
+		model.addColumn("dy");
+		model.addColumn("x Value");
+		model.addColumn("y Value");
+		valueTable.setModel(model);
 	}
 	
 	private static void setupGraph() {
@@ -366,26 +378,10 @@ public class EulerSolver {
 		}
 	}
 
-	private static void newTableModel() {
-		model = new DefaultTableModel() {
-			private static final long serialVersionUID = 193961864905348635L;
-
-			@Override
-			public boolean isCellEditable(int row, int column) {
-				return false;
-			}
-		};
-		model.addColumn("Step");
-		model.addColumn("dy");
-		model.addColumn("x Value");
-		model.addColumn("y Value");
-		valueTable.setModel(model);
-		series.clear();
-	}
-
 	protected static void populateTable() {
 		if (equation.isValid() && initialX.isValid() && initialY.isValid() && stepSize.isValid() && stepCount.isValid() && decimals.isValid()) {
-			newTableModel();
+			model.setRowCount(0);
+			series.clear();
 			double lastX = Double.valueOf(initialX.getValue());
 			double lastY = Double.valueOf(initialY.getValue());
 			double dx = Double.valueOf(stepSize.getValue());
